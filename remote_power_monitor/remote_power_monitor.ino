@@ -61,7 +61,7 @@ Adafruit_8x16minimatrix matrix = Adafruit_8x16minimatrix();
 
 #define DATA_PIN A5 //pin that reads the voltage
 char replybuffer[255]; // this is a large buffer for replies
-int vbat; //hold battery voltage
+int vbat = 0; //hold battery voltage
 boolean powerOut = false;
 boolean tempLow = false;
 int count = 0;
@@ -99,6 +99,9 @@ static const uint8_t PROGMEM
       
     };
 
+
+//reset function
+void(* resetFunc) (void) = 0;//declare reset function at address 0
 
 void setup() {
  
@@ -139,7 +142,9 @@ void setup() {
 		matrix.writeDisplay();
 		delay(50);
   }
-    while(1);
+    //if the battery is too low, it cant find the fona.
+    //keep rebooting until it finds it
+     resetFunc();
   }
    
 	Serial.println(F("FONA is OK"));
@@ -156,6 +161,7 @@ void setup() {
   //get signal strength
   uint8_t n = fona.getRSSI();
   
+   int signalCount = 0;
   //if the signal strenth is to low, will need to wait until it comes back up
   while (n < 5){
     for (int8_t x=7; x>=-120; x--) {
@@ -168,6 +174,14 @@ void setup() {
     delay(5000);
     n=fona.getRSSI();
     Serial.print(n);
+
+    signalCount++;
+    //reboot sometimes needed to try and grab signal
+    //espcially if its coming off a dead battery
+    if (signalCount == 4){
+      resetFunc();
+    }
+    
   }
 	
 	String signal;
